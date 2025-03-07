@@ -1,9 +1,7 @@
 #include <boost/program_options.hpp>
 #include <iostream>
-#include <array>
 
 #include "ICScenario.h"
-// #include "particle.h"
 
 namespace po = boost::program_options;
 
@@ -19,7 +17,7 @@ int main(int argc, char** argv) {
         ("Lz", po::value<double>()->default_value(20.0), 
             "z length (Angstroms)")
         ("dt", po::value<double>()->default_value(0.001), 
-            "Time-step")
+            "Time-step") 
         ("T", po::value<double>(), 
             "Final time")
 
@@ -57,8 +55,11 @@ int main(int argc, char** argv) {
     const double Ly = vm["Ly"].as<double>();
     const double Lz = vm["Lz"].as<double>();
     const double dt = vm["dt"].as<double>();
-    //  --OPTIONAL ALL
+    double percType1 = vm["percent-type1"].as<double>();
+
+    //  --OPTIONAL ALL (default to 0 if not provided and change later)
     double T = vm.count("T") ? vm["T"].as<double>() : 0.0;
+    unsigned int N = vm.count("N") ? vm["N"].as<int>() : 0;
     double temp = vm.count("temp") ? vm["temp"].as<double>() : 0.0;
 
     //DETERMINE SCENARIO:
@@ -67,13 +68,28 @@ int main(int argc, char** argv) {
     //PRE-DEFINED TEST-CASES:
     if (vm.count("ic-one")) {
         scenario = ICScenario::ONE;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp);
+        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     } 
-    if (vm.count("ic-one-vel")) scenario = ICScenario::ONE_VEL;
-    if (vm.count("ic-two")) scenario = ICScenario::TWO;
-    if (vm.count("ic-two-pass1")) scenario = ICScenario::TWO_PASS1;
-    if (vm.count("ic-two-pass2")) scenario = ICScenario::TWO_PASS2;
-    if (vm.count("ic-two-pass3")) scenario = ICScenario::TWO_PASS3;
+    else if (vm.count("ic-one-vel")) {
+        scenario = ICScenario::ONE_VEL;
+        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+    }
+    else if (vm.count("ic-two")) {
+        scenario = ICScenario::TWO;
+        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+    }
+    if (vm.count("ic-two-pass1")) {
+        scenario = ICScenario::TWO_PASS1;
+        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+    }
+    if (vm.count("ic-two-pass2")) {
+        scenario = ICScenario::TWO_PASS2;
+        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+    }
+    if (vm.count("ic-two-pass3")) {
+        scenario = ICScenario::TWO_PASS3;
+        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+    }
 
     //RANDOM TEST:
     if (vm.count("ic-random")) {

@@ -1,6 +1,9 @@
 #ifndef IC_SCENARIO_H
 #define IC_SCENARIO_H
 
+#include <iostream>
+#include <array>
+
 enum class ICScenario {
     NONE, 
     ONE,
@@ -13,7 +16,7 @@ enum class ICScenario {
 };
 
 //INITIALISE SCENARIOS FOR TEST CASES
-void initScenarioTest(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp);
+void initScenarioTest(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp, double& percType1, unsigned int& N);
 
 //void initScenarioRandom(ICScenario scenario, double temp);
 
