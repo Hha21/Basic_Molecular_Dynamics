@@ -16,7 +16,7 @@ enum class ICScenario {
 };
 
 //INITIALISE SCENARIOS FOR TEST CASES
-void initScenarioTest(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp, double& percType1, unsigned int& N);
+void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp, double& percType1, unsigned int& N);
 
 //void initScenarioRandom(ICScenario scenario, double temp);
 

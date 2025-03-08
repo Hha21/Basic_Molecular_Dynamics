@@ -18,3 +18,7 @@ void Domain::applyBC(std::vector<Particle>& particles) {
         }
     }
 }
+
+const std::array<double, 3>& Domain::getDims() const {
+    return this->domainSize;
+}

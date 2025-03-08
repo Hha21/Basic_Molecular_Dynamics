@@ -3,7 +3,7 @@
 
 //Lx, Ly, Lz, dt, T, temp
 
-void initScenarioTest(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp, double& percType1, unsigned int& N) {
+void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp, double& percType1, unsigned int& N) {
     switch(scenario) {
 
         case ICScenario::ONE: {
@@ -82,6 +82,12 @@ void initScenarioTest(ICScenario scenario, const double& Lx, const double& Ly, c
             N = 2;
 
             Solver solveTest6(Lx, Ly, Lz, dt, T, temp, percType1, N, scenario);
+            break;
+        }
+
+        case ICScenario::RANDOM: {
+
+            Solver solveRand(Lx, Ly, Lz, dt, T, temp, percType1, N, scenario);
             break;
         }
 

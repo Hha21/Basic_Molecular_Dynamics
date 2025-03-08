@@ -17,6 +17,9 @@ class Domain {
 
         void applyBC(std::vector<Particle>& particles);
         
+        //GETTERS
+        const std::array<double, 3>& getDims() const;
+        
 };
 
 

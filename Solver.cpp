@@ -9,6 +9,37 @@ static inline double pow14(double r2) {
     return pow8(r2) * r2 * r2 * r2;
 }
 
+std::array<double, 3> Solver::getRandPos() {
+    //GET {Lx, Ly, Lz} ONCE
+    static const std::array<double, 3> dims = this->domain.getDims();
+
+    return  {dims[0] * (Solver::randDouble()),
+            dims[1] * (Solver::randDouble()),
+            dims[2] * (Solver::randDouble())};
+}
+
+std::array<double, 3> Solver::getRandVel() {
+    return {-0.5 + (Solver::randDouble()),
+            -0.5 + (Solver::randDouble()),
+            -0.5 + (Solver::randDouble())};
+}
+
+bool Solver::isValidPos(const std::array<double, 3>& pos) {
+    // IF NO PARTICLES THEN ADD
+    if (this->particles.empty()) return true;
+
+    static const double minDist2 = 0.5 * 0.5;
+
+    for (const Particle& particle : this->particles) {
+        const std::array<double, 3> pPos = particle.getPos();
+        double dist2 =  (pos[0] - pPos[0]) * (pos[0] - pPos[0]) +
+                    (pos[1] - pPos[1]) * (pos[1] - pPos[1]) +
+                    (pos[2] - pPos[2]) * (pos[2] - pPos[2]);
+        if (dist2 < minDist2) return false;
+    }
+    return true;
+}
+
 // SOLVER METHODS
 Solver::Solver(double Lx_, double Ly_, double Lz_, 
                 double dt_, double T_, double temp_, 
@@ -17,15 +48,15 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             dt(dt_), T(T_), temp(temp_),
             percType1(percType1_), N(N_),
             time(0.0), scenario(scenario_),
+            randGen(std::random_device{}()), 
+            distribution(0.0, 1.0),
             logger("particles.txt", "kinetic_energy.txt"){
             
             Solver::initParticles();    
             std::cout << "SOLVER INITIALISED!" << std::endl;
-            Solver::printForces();
+            Solver::printPosVels();
             Solver::computeForces();
-            Solver::printForces();
             Solver::run();
-            Solver::printForces();
 
 }
 
@@ -34,7 +65,7 @@ void Solver::initParticles() {
     particles.clear();
 
     //INIT PARTICLES DEPENDING UPON TEST CASE
-    switch(this->scenario) {
+    switch(this->scenario) {    
         case ICScenario::ONE: {
 
             std::array<double, 3> p0Pos = {10.0, 10.0, 10.0};
@@ -107,6 +138,24 @@ void Solver::initParticles() {
 
             particles.emplace_back(0, 1, p0Pos, p0Vel);
             particles.emplace_back(1, 1, p1Pos, p1Vel);
+
+            break;
+        }
+
+        case ICScenario::RANDOM: {
+            std::cout << "HERE RANDOM!" << std::endl;
+
+            unsigned int ID_ = 0;
+
+            while (this->particles.size() < this->N) {
+                std::array<double, 3> newPos = Solver::getRandPos();
+                if (Solver::isValidPos(newPos)) {
+                    std::array<double, 3> newVel = Solver::getRandVel();
+
+                    unsigned int type = (rand() / (double)RAND_MAX) < percType1 / 100.0 ? 1 : 0;
+                    particles.emplace_back(ID_++, type, newPos, newVel);
+                }
+            }
 
             break;
         }
@@ -195,7 +244,7 @@ void Solver::step() {
 }
 
 void Solver::run() {
-    std::cout << "RUNNING SIMULATION ... " << std::endl;
+    std::cout << "RUNNING SIMULATION... " << std::endl;
 
     double lastOutputTime = -0.1; 
 
@@ -218,5 +267,11 @@ void Solver::run() {
 void Solver::printForces() {
     for (unsigned int i = 0; i < this->N; ++i) {
         particles[i].printForce();
+    }
+}
+
+void Solver::printPosVels() {
+    for (unsigned int i = 0; i < this->N; ++i) {
+        particles[i].printPosVel();
     }
 }

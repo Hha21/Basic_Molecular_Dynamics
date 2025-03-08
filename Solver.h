@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <random>
 
 #include "ICScenario.h"
 #include "Particle.h"
@@ -12,10 +13,13 @@
 class Solver {
 
     private:
-        std::vector<Particle> particles;    //Store of Particles
-        Domain domain;                      //Domain for BC
-        ICScenario scenario;                //Scenario for Init
-        Logger logger;                      //Logger for file write
+        std::vector<Particle> particles;                        //Store of Particles
+        Domain domain;                                          //Domain for BC
+        ICScenario scenario;                                    //Scenario for Init
+        Logger logger;                                          //Logger for file write
+
+        std::mt19937 randGen;                                   //Random Num Generator
+        std::uniform_real_distribution<double> distribution;    //Distribution
 
         const double dt;
         const double T;
@@ -25,7 +29,7 @@ class Solver {
         const double percType1;
         const unsigned int N;
 
-        double KE;                          //Kinetic Energy
+        double KE;                                              //Kinetic Energy
 
     public:
         Solver(double Lx_, double Ly_, double Lz_, 
@@ -42,7 +46,12 @@ class Solver {
 
 
         // HELPER
+        double randDouble() {return this->distribution(this->randGen);};
+        std::array<double, 3> getRandPos();
+        std::array<double, 3> getRandVel();
+        bool isValidPos(const std::array<double, 3>& pos);
         void printForces();
+        void printPosVels();
 };
 
 

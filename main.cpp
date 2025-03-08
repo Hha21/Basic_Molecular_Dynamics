@@ -68,27 +68,27 @@ int main(int argc, char** argv) {
     //PRE-DEFINED TEST-CASES:
     if (vm.count("ic-one")) {
         scenario = ICScenario::ONE;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+        initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     } 
     else if (vm.count("ic-one-vel")) {
         scenario = ICScenario::ONE_VEL;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+        initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     }
     else if (vm.count("ic-two")) {
         scenario = ICScenario::TWO;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+        initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     }
     if (vm.count("ic-two-pass1")) {
         scenario = ICScenario::TWO_PASS1;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+        initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     }
     if (vm.count("ic-two-pass2")) {
         scenario = ICScenario::TWO_PASS2;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+        initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     }
     if (vm.count("ic-two-pass3")) {
         scenario = ICScenario::TWO_PASS3;
-        initScenarioTest(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
+        initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
     }
 
     //RANDOM TEST:
@@ -97,10 +97,8 @@ int main(int argc, char** argv) {
             std::cerr << "Error: --ic-random called but insufficient arguments provided" << std::endl;
             return 1;
         } else {
-            double percType1 = vm["percent-type1"].as<double>();
-            const int N = vm["N"].as<int>();
-            const double T = vm["T"].as<double>();
             scenario = ICScenario::RANDOM;
+            initScenario(scenario, Lx, Ly, Lz, dt, T, temp, percType1, N);
         }
     }
     //ELSE THROW ERROR:

@@ -49,11 +49,12 @@ public:
         position(pos), 
         velocity(vel), 
         force(frc) {
-            std::cout << "Instance " << ID_ << " of Particle created" << std::endl;
+            std::cout << "Instance " << ID_ << ", Type " << type << " of Particle created" << std::endl;
     };
 
     void printID();
     void printForce();
+    void printPosVel();
 
     // GETTERS
     const std::array<double, 3>& getPos() const;

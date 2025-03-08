@@ -90,3 +90,15 @@ void Particle::printForce() {
     }
     std::cout << "}" << std::endl;
 }
+
+void Particle::printPosVel() {
+    std::cout << "Pos_" << this->ID << " = {";
+    for (int i = 0; i < 3; ++i) {
+        std::cout << this->position[i] << " ";
+    }
+    std::cout << "}" << std::endl;
+    std::cout << "Vel_" << this->ID << " = {";
+    for (int i = 0; i < 3; ++i) {
+        std::cout << this->velocity[i] << " ";
+    }
+}
