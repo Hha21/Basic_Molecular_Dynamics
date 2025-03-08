@@ -39,6 +39,7 @@ class Solver {
         void initParticles();
         
         // DYNAMICS
+        void setTemp();
         void computeForces();
         void computeKE();
         void step();

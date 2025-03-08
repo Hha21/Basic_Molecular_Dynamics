@@ -23,6 +23,7 @@ const unsigned int Particle::getID() const {
 std::array<double, 3>& Particle::getPos() {
     return this->position;
 }
+
 std::array<double, 3>& Particle::getVel() {
     return this->velocity;
 }

@@ -1,6 +1,9 @@
 #include "Solver.h"
 
 //HELPER FUNCTIONS
+
+static constexpr double BOLTZMANN = 0.8314459920816467;
+
 static inline double pow8(double r2) {
     return r2 * r2 * r2 * r2;
 }
@@ -55,7 +58,6 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             
             Solver::initParticles();    
             std::cout << "SOLVER INITIALISED!" << std::endl;
-            Solver::computeForces();
             Solver::run();
 
 }
@@ -143,26 +145,53 @@ void Solver::initParticles() {
         }
 
         case ICScenario::RANDOM: {
-            std::cout << "HERE RANDOM!" << std::endl;
 
+            unsigned int type1Num = static_cast<unsigned int>(std::ceil((percType1 / 100.0) * this->N));
+            unsigned int currType1 = 0;
             unsigned int ID_ = 0;
 
             while (this->particles.size() < this->N) {
+                //GENERATE RANDOM POS THEN CHECK
                 std::array<double, 3> newPos = Solver::getRandPos();
                 if (Solver::isValidPos(newPos)) {
                     std::array<double, 3> newVel = Solver::getRandVel();
+                    unsigned int type = 0;
 
-                    unsigned int type = (rand() / (double)RAND_MAX) < percType1 / 100.0 ? 1 : 0;
+                    if (currType1 < type1Num) {
+                        type = 1;
+                        currType1++;
+                    }
+                    
                     particles.emplace_back(ID_++, type, newPos, newVel);
                 }
             }
-
+            Solver::setTemp();
             break;
         }
 
         default:
             std::cerr << "ERR: INVALID SCENARIO!" << std::endl;
             exit(1);
+    }
+}
+
+
+//DYNAMICS 
+
+void Solver::setTemp() {
+    if (this->temp <= 0.0) return;
+
+    //GET CURRENT KE
+    Solver::computeKE();
+
+    double temp0 = (2.0 * this->KE) / (3.0 * BOLTZMANN);
+
+    double lambda = std::sqrt(this->temp / temp0);
+
+    for (Particle& p : this->particles) {
+        std::array<double, 3> v0 = p.getVel();
+        for (int k = 0; k < 3; ++k) v0[k] *= lambda;
+        p.setVel(v0);
     }
 }
 
