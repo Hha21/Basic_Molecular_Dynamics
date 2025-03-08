@@ -50,11 +50,11 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             time(0.0), scenario(scenario_),
             randGen(std::random_device{}()), 
             distribution(0.0, 1.0),
-            logger("particles.txt", "kinetic_energy.txt"){
+            logger("kinetic_energy.txt",                                    // IF RAND -> NO particles.txt
+                scenario == ICScenario::RANDOM ? "" : "particles.txt") {
             
             Solver::initParticles();    
             std::cout << "SOLVER INITIALISED!" << std::endl;
-            Solver::printPosVels();
             Solver::computeForces();
             Solver::run();
 
@@ -258,6 +258,10 @@ void Solver::run() {
 
         Solver::step();
     }
+    Solver::computeKE();
+    logger.logParticleData(this->time, this->particles);
+    logger.logKineticEnergy(this->time, this->KE);
+    lastOutputTime = this->time;
 
     std::cout << "SIMULATION COMPLETE" << std::endl;
 }

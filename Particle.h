@@ -49,7 +49,7 @@ public:
         position(pos), 
         velocity(vel), 
         force(frc) {
-            std::cout << "Instance " << ID_ << ", Type " << type << " of Particle created" << std::endl;
+            // std::cout << "Instance " << ID_ << ", Type " << type << " of Particle created" << std::endl;
     };
 
     void printID();

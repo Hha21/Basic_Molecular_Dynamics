@@ -12,10 +12,9 @@ class Logger {
         std::ofstream kineticEnergyFile;
 
     public:
-        Logger(const std::string& particleFilename, const std::string& keFilename);
+        Logger(const std::string& keFilename, const std::string& particleFilename = "");
         ~Logger();
 
-        void openFiles(const std::string& particleFilename, const std::string keFilename);
         void logParticleData(double time, const std::vector<Particle>& particles);
         void logKineticEnergy(double time, double kineticEnergy);
         void closeFiles();

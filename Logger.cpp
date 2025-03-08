@@ -1,12 +1,13 @@
 #include "Logger.h"
 
-Logger::Logger(const std::string& particleFilename, const std::string& keFilename) {
-    particleFile.open(particleFilename);
+Logger::Logger(const std::string& keFilename, const std::string& particleFilename) {
     kineticEnergyFile.open(keFilename);
-
-    //HEADERS
-    particleFile << "TIME ID X Y Z U V W\n";
     kineticEnergyFile << "TIME KE\n";
+
+    if (!particleFilename.empty()) {
+        particleFile.open(particleFilename);
+        particleFile << "TIME ID X Y Z U V W\n";
+    }
 }
 
 void Logger::logParticleData(double time, const std::vector<Particle>& particles) {
