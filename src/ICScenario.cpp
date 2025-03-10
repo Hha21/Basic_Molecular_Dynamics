@@ -1,8 +1,28 @@
+/**
+ * @file ICScenario.cpp
+ * @brief Implements initialization of predefined test scenarios.
+ */
+
 #include "ICScenario.h"
 #include "Solver.h"
 
-//Lx, Ly, Lz, dt, T, temp
-
+/**
+ * @brief Initializes a predefined test scenario.
+ * 
+ * Sets up the simulation parameters for a chosen scenario, modifying
+ * domain dimensions, time step, temperature, and particle count accordingly.
+ * Calls @ref Solver to run simulation
+ * 
+ * @param scenario The chosen initial condition scenario.
+ * @param Lx Domain length in the x-direction.
+ * @param Ly Domain length in the y-direction.
+ * @param Lz Domain length in the z-direction.
+ * @param dt Time step size.
+ * @param T Total simulation time.
+ * @param temp Initial system temperature.
+ * @param percType1 Percentage of type-1 particles.
+ * @param N Number of particles.
+ */
 void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const double& Lz, const double& dt, double& T, double& temp, double& percType1, unsigned int& N) {
     switch(scenario) {
 
@@ -15,8 +35,6 @@ void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const
             N = 1;
             
             Solver solveTest1(Lx, Ly, Lz, dt, T, temp, percType1, N, scenario);
-            // solveTest1.initParticles();
-
             break;
         }
         
@@ -29,8 +47,6 @@ void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const
             N = 1;
 
             Solver solveTest2(Lx, Ly, Lz, dt, T, temp, percType1, N, scenario);
-            // solveTest2.initParticles();
-
             break;
         }
 
@@ -43,9 +59,6 @@ void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const
             N = 2;
 
             Solver solveTest3(Lx, Ly, Lz, dt, T, temp, percType1, N, scenario);
-            // solveTest3.initParticles();
-
-
             break;
         }
 
@@ -97,11 +110,3 @@ void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const
 
     }
 }
-
-// void initScenarioRandom(ICScenario scenario, double temp = 0.0) {
-//     switch(scenario) {
-//         case ICScenario::RANDOM:
-//             std::cout << "Initializing random particle distribution..." << std::endl;
-//             break;
-//     }
-// }

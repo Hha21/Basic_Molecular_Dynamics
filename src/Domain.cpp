@@ -1,5 +1,17 @@
 #include "Domain.h"
 
+ /**
+ * @brief Adds a force component to the particle force.
+ * 
+ * @param particles Reference to vector of all particles in 
+ * simulation.
+ * 
+ * The function applies solid wall boundary conditions:
+ * if (x_i < 0) :       x_i = -x_i
+ *                      u_{i,x} = |u_{i,x}|
+ * else if (x_i > L_x): x_i = 2L_x - x_i
+ *                      u_{i,x} = -|u_{i,x}|
+ */
 void Domain::applyBC(std::vector<Particle>& particles) {
 
     for (Particle& p : particles) {
@@ -19,6 +31,10 @@ void Domain::applyBC(std::vector<Particle>& particles) {
     }
 }
 
+/**
+ * @brief Gets the domain dimensions.
+ * @return A const reference to the domain size {Lz, Ly, Lz}.
+ */
 const std::array<double, 3>& Domain::getDims() const {
     return this->domainSize;
 }

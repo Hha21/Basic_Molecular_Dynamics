@@ -1,16 +1,8 @@
 #include "Solver.h"
 
-//HELPER FUNCTIONS
-
+///Boltzmann Constant k_b
 static constexpr double BOLTZMANN = 0.8314459920816467;
 
-static inline double pow8(double r2) {
-    return r2 * r2 * r2 * r2;
-}
-
-static inline double pow14(double r2) {
-    return pow8(r2) * r2 * r2 * r2;
-}
 
 std::array<double, 3> Solver::getRandPos() {
     //GET {Lx, Ly, Lz} ONCE
@@ -43,7 +35,9 @@ bool Solver::isValidPos(const std::array<double, 3>& pos) {
     return true;
 }
 
-// SOLVER METHODS
+/**
+ * @brief Constructs the solver, intiliases problem and runs upon being called.
+ */
 Solver::Solver(double Lx_, double Ly_, double Lz_, 
                 double dt_, double T_, double temp_, 
                 double percType1_, unsigned int N_, ICScenario scenario_) 
@@ -62,6 +56,9 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
 
 }
 
+/**
+ * @brief Initializes particles according to the specified initial condition scenario.
+ */
 void Solver::initParticles() {
     // IF PARTICLES
     particles.clear();
@@ -197,6 +194,10 @@ void Solver::setTemp() {
     }
 }
 
+
+/**
+ * @brief Computes the Lennard-Jones force between all particle pairs.
+ */
 void Solver::computeForces() {
     // RESET FORCES EACH TIME CALLED
     for (Particle& p : this->particles) {
@@ -299,18 +300,4 @@ void Solver::run() {
     lastOutputTime = this->time;
 
     std::cout << "SIMULATION COMPLETE" << std::endl;
-}
-
-//TEMP
-
-void Solver::printForces() {
-    for (unsigned int i = 0; i < this->N; ++i) {
-        particles[i].printForce();
-    }
-}
-
-void Solver::printPosVels() {
-    for (unsigned int i = 0; i < this->N; ++i) {
-        particles[i].printPosVel();
-    }
 }

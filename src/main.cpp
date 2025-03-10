@@ -1,9 +1,25 @@
+/**
+ * @file main.cpp
+ * @brief Entry point for the molecular dynamics simulation.
+ */
+
 #include <boost/program_options.hpp>
 #include <iostream>
 
 #include "ICScenario.h"
 
 namespace po = boost::program_options;
+
+/**
+ * @brief Main function to execute the simulation.
+ * 
+ * Parses command-line arguments using Boost Program Options, sets up the initial
+ * conditions, and runs the simulation.
+ * 
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line arguments.
+ * @return int Returns 0 on successful execution, else 1.
+ */
 
 int main(int argc, char** argv) {
 

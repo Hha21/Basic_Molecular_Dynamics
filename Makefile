@@ -30,8 +30,10 @@ clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
 doc:
-	mkdir -p $(DOC_DIR)
 	doxygen Doxyfile
+
+clean-doc:
+	rm -rf docs/html docs/latex
 
 run: $(TARGET)
 	./$(TARGET)
