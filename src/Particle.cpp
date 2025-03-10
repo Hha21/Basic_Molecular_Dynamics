@@ -1,5 +1,9 @@
 #include "Particle.h"
 
+constexpr double ParticleProp::mass[2];
+constexpr double ParticleProp::epsilon[2][2];
+constexpr double ParticleProp::sigma6[2][2];
+constexpr double ParticleProp::sigma12[2][2];
 
 // GETTERS
 // CONST GETTERS
@@ -30,6 +34,10 @@ std::array<double, 3>& Particle::getVel() {
 
 
 // SETTERS
+void Particle::addForceComp(int k, double value) {
+    this->force[k] += value;
+}
+
 
 void Particle::setPos(const std::array<double, 3>& newPos) {
     this->position = newPos;

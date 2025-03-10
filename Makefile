@@ -1,32 +1,37 @@
 # COMPILER, FLAGS -Wall -Wextra
 CXX = g++
-CXXFLAGS = -std=c++17 -O2
+CXXFLAGS = -O3 -std=c++17 
 LDFLAGS = -lboost_program_options
 
 # DIRECTORIES
 BUILD_DIR = build
-SRC_DIR = .
+SRC_DIR = src
+BIN_DIR = bin
+DOC_DIR = doc
 
-SRCS = main.cpp ICScenario.cpp Solver.cpp Domain.cpp Particle.cpp Logger.cpp
-OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)	 # .cpp -> .o in ./build
-TARGET = md  # md.out
+SRCS = $(wildcard $(SRC_DIR)/*.cpp)
+OBJS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS))	 # .cpp -> .o in ./build
+TARGET = $(BIN_DIR)/md
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $^ -o $@ -lboost_program_options
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-$(BUILD_DIR):
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	mkdir -p $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(BIN_DIR)
+
+doc:
+	mkdir -p $(DOC_DIR)
+	doxygen Doxyfile
 
 run: $(TARGET)
 	./$(TARGET)

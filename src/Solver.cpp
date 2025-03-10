@@ -121,7 +121,7 @@ void Solver::initParticles() {
             std::array<double, 3> p0Pos = {8.5, 11.3, 10.0};
             std::array<double, 3> p0Vel = {0.5, 0.0, 0.0};
 
-            std::array<double, 3> p1Pos = {11.5, 8.7, 10.0};
+            std::array<double, 3> p1Pos = {11.5, 8.7, 10.0};    
             std::array<double, 3> p1Vel = {-0.5, 0.0, 0.0};
 
             particles.emplace_back(0, 0, p0Pos, p0Vel);
@@ -181,6 +181,8 @@ void Solver::initParticles() {
 void Solver::setTemp() {
     if (this->temp <= 0.0) return;
 
+    std::cout << "TEMP APPLIED!" << std::endl;
+
     //GET CURRENT KE
     Solver::computeKE();
 
@@ -203,39 +205,43 @@ void Solver::computeForces() {
 
     // LOOP FOR UNIQUE PAIRS (i, j) WITH i < j
     for (unsigned int i = 0; i < this->N; ++i) {
+
+        unsigned int typ1 = this->particles[i].getType();
+        const std::array<double, 3>& pos1 = this->particles[i].getPos();
         for (unsigned int j = i + 1; j < this->N; ++j) {
 
-            Particle& p1 = this->particles[i];
-            Particle& p2 = this->particles[j];
+            unsigned int typ2 = this->particles[i].getType();
 
-            //PARTICLE TYPES
-            unsigned int typ1 = p1.getType();
-            unsigned int typ2 = p2.getType();
-
-            std::array<double, 3> r;
-            for (int k = 0; k < 3; ++k) {
-                r[k] = p2.getPos()[k] - p1.getPos()[k];
-            }
+            const std::array<double, 3>& pos2 = this->particles[j].getPos();
+            
+            double rx = pos1[0] - pos2[0];
+            double ry = pos1[1] - pos2[1];
+            double rz = pos1[2] - pos2[2];
+            double r2 = rx * rx + ry * ry + rz * rz;
 
             // SQUARED DISTANCE (1 / r^2)
-            double inv_r2 = 1.0 / (r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+            double inv_r2 = 1.0 / r2;
+            double inv_r4 = inv_r2 * inv_r2;
+            double inv_r8 = inv_r4 * inv_r4;
+            double inv_r14 = inv_r8 * inv_r4 * inv_r2; 
         
             // LENNARD-JONES FORCE
             double eps_ij = ParticleProp::epsilon[typ1][typ2];
             double sigma6_ij = ParticleProp::sigma6[typ1][typ2];
             double sigma12_ij = ParticleProp::sigma12[typ1][typ2];
 
-            double force_mag = -24.0 * eps_ij * ((sigma12_ij * pow14(inv_r2)) - (sigma6_ij * pow8(inv_r2)));
+            double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
 
             //FORCE VECTOR:
-            std::array<double, 3> force;
-            for (int k = 0; k < 3; ++k) {
-                force[k] = force_mag * r[k];
-            }
-
-            //APPLY TO BOTH:
-            p1.addForce(force, false);
-            p2.addForce(force, true);
+            double fx = force_mag * rx;
+            double fy = force_mag * ry;
+            double fz = force_mag * rz;
+            this->particles[i].addForceComp(0, -fx);
+            this->particles[i].addForceComp(1, -fy);
+            this->particles[i].addForceComp(2, -fz);
+            this->particles[j].addForceComp(0, fx);
+            this->particles[j].addForceComp(1, fy);
+            this->particles[j].addForceComp(2, fz);
         }
     }
 }

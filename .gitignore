@@ -34,6 +34,8 @@
 # txt
 *.txt
 
-#md
+# md
 md
 
+# er
+*.er

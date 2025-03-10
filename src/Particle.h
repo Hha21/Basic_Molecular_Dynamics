@@ -66,6 +66,7 @@ public:
     std::array<double, 3>& getVel();
     
     // SETTERS
+    void addForceComp(int k, double value);
     void setPos(const std::array<double, 3>& newPos);
     void setVel(const std::array<double, 3>& newVel);
     void resetForce();
