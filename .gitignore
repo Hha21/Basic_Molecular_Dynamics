@@ -42,3 +42,8 @@ md
 
 # html
 html
+
+# binaries
+bin/
+
+.ipynb_checkpoints/

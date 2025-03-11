@@ -1,5 +1,4 @@
 #include "Solver.h"
-#include <omp.h>
 
 ///Boltzmann Constant k_b
 static constexpr double BOLTZMANN = 0.8314459920816467;
@@ -52,7 +51,7 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
                 scenario == ICScenario::RANDOM ? "" : "particles.txt") {
             
             Solver::initParticles();    
-            std::cout << "SOLVER INITIALISED" << std::endl;
+            std::cout << "SERIAL SOLVER INITIALISED" << std::endl;
             Solver::run();
 
 }
@@ -201,76 +200,49 @@ void Solver::setTemp() {
  */
 void Solver::computeForces() {
     // RESET FORCES EACH TIME CALLED
-    #pragma omp parallel for
     for (Particle& p : this->particles) {
         p.resetForce();
     }
 
-    int NUM_THREADS;
-    #pragma omp parallel
-    {
-        NUM_THREADS = omp_get_num_threads();
-    }
-
-    std::vector<std::vector<std::array<double, 3>>> FORCE_BUFFER(
-        NUM_THREADS, std::vector<std::array<double, 3>>(this->N, {0.0, 0.0, 0.0}));
-
-    #pragma omp parallel 
-    {
-        int THREAD_ID = omp_get_thread_num();
-
-        std::vector<std::array<double, 3>>& LOCAL_FORCE = FORCE_BUFFER[THREAD_ID];
-
-        #pragma omp for schedule(dynamic)
-        for (unsigned int i = 0; i < this->N; ++i) {
-
-            unsigned int typ1 = this->particles[i].getType();
-            const std::array<double, 3>& pos1 = this->particles[i].getPos();
-            for (unsigned int j = i + 1; j < this->N; ++j) {
-
-                unsigned int typ2 = this->particles[i].getType();
-
-                const std::array<double, 3>& pos2 = this->particles[j].getPos();
-                
-                double rx = pos1[0] - pos2[0];
-                double ry = pos1[1] - pos2[1];
-                double rz = pos1[2] - pos2[2];
-                double r2 = rx * rx + ry * ry + rz * rz;
-
-                // SQUARED DISTANCE (1 / r^2)
-                double inv_r2 = 1.0 / r2;
-                double inv_r4 = inv_r2 * inv_r2;
-                double inv_r8 = inv_r4 * inv_r4;
-                double inv_r14 = inv_r8 * inv_r4 * inv_r2; 
-            
-                // LENNARD-JONES FORCE
-                double eps_ij = ParticleProp::epsilon[typ1][typ2];
-                double sigma6_ij = ParticleProp::sigma6[typ1][typ2];
-                double sigma12_ij = ParticleProp::sigma12[typ1][typ2];
-
-                double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
-
-                //FORCE VECTOR:
-                double fx = force_mag * rx;
-                double fy = force_mag * ry;
-                double fz = force_mag * rz;
-
-                //CRITICAL REGION - RACE CONDITION
-                LOCAL_FORCE[i][0] -= fx;
-                LOCAL_FORCE[i][1] -= fy;
-                LOCAL_FORCE[i][2] -= fz;
-                LOCAL_FORCE[j][0] += fx;
-                LOCAL_FORCE[j][1] += fy;
-                LOCAL_FORCE[j][2] += fz;
-            }
-        }
-    }
-    #pragma omp parallel for
+    // LOOP FOR UNIQUE PAIRS (i, j) WITH i < j
     for (unsigned int i = 0; i < this->N; ++i) {
-        for (int THREAD_ID = 0; THREAD_ID < NUM_THREADS; ++THREAD_ID) {
-            this->particles[i].addForceComp(0, FORCE_BUFFER[THREAD_ID][i][0]);
-            this->particles[i].addForceComp(1, FORCE_BUFFER[THREAD_ID][i][1]);
-            this->particles[i].addForceComp(2, FORCE_BUFFER[THREAD_ID][i][2]);
+
+        unsigned int typ1 = this->particles[i].getType();
+        const std::array<double, 3>& pos1 = this->particles[i].getPos();
+        for (unsigned int j = i + 1; j < this->N; ++j) {
+
+            unsigned int typ2 = this->particles[i].getType();
+
+            const std::array<double, 3>& pos2 = this->particles[j].getPos();
+            
+            double rx = pos1[0] - pos2[0];
+            double ry = pos1[1] - pos2[1];
+            double rz = pos1[2] - pos2[2];
+            double r2 = rx * rx + ry * ry + rz * rz;
+
+            // SQUARED DISTANCE (1 / r^2)
+            double inv_r2 = 1.0 / r2;
+            double inv_r4 = inv_r2 * inv_r2;
+            double inv_r8 = inv_r4 * inv_r4;
+            double inv_r14 = inv_r8 * inv_r4 * inv_r2; 
+        
+            // LENNARD-JONES FORCE
+            double eps_ij = ParticleProp::epsilon[typ1][typ2];
+            double sigma6_ij = ParticleProp::sigma6[typ1][typ2];
+            double sigma12_ij = ParticleProp::sigma12[typ1][typ2];
+
+            double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
+
+            //FORCE VECTOR:
+            double fx = force_mag * rx;
+            double fy = force_mag * ry;
+            double fz = force_mag * rz;
+            this->particles[i].addForceComp(0, -fx);
+            this->particles[i].addForceComp(1, -fy);
+            this->particles[i].addForceComp(2, -fz);
+            this->particles[j].addForceComp(0, fx);
+            this->particles[j].addForceComp(1, fy);
+            this->particles[j].addForceComp(2, fz);
         }
     }
 }
@@ -329,3 +301,4 @@ void Solver::run() {
 
     std::cout << "SIMULATION COMPLETE" << std::endl;
 }
+
