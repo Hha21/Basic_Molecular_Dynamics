@@ -53,11 +53,10 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             Solver::initParticles();    
             std::cout << "SERIAL SOLVER INITIALISED" << std::endl;
             Solver::run();
-
 }
 
 Solver::~Solver(){
-    
+
 }
 
 /**
@@ -306,3 +305,11 @@ void Solver::run() {
     std::cout << "SIMULATION COMPLETE" << std::endl;
 }
 
+const std::array<double, 3>& Solver::getFinalPosK(unsigned int ID) {
+    //const std::array<double, 3> pos = this->particles[ID].getPos();
+    return this->particles[ID].getPos();
+}
+
+const double Solver::getKE(){
+    return this->KE;
+}

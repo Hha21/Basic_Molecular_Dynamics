@@ -92,7 +92,7 @@ void initScenario(ICScenario scenario, const double& Lx, const double& Ly, const
             T == 0.0 ? T = 50.0 : T = T;
 
             // ENFORCE MANDATORY TEST CASE PARAMS:
-            percType1 = 50.0;
+            percType1 = 0.0;
             N = 2;
 
             Solver solveTest6(Lx, Ly, Lz, dt, T, temp, percType1, N, scenario);

@@ -47,3 +47,6 @@ html
 bin/
 
 .ipynb_checkpoints/
+
+# csv
+*.csv

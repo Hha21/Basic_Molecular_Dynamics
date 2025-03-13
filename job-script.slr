@@ -3,20 +3,25 @@
 #SBATCH --output=output_%j.txt
 #SBATCH --nodes=1
 #SBATCH --ntasks=48
-#SBATCH --mem=8000MB
-#SBATCH --time=05:30:00
+#SBATCH --mem=16000MB
+#SBATCH --time=03:30:00
 #SBATCH --partition=short
 
-EXEC="./mdpar"
+EXEC="./bin/mdpar"
 N_PARTICLES=10000
 Lx=50
 Ly=50
 Lz=50
-T=5.0
+T=1.0
 NUM_THREADS_LIST="1 2 4 8 16 32 48"
 
 for NUM_THREADS in $NUM_THREADS_LIST; do
     export OMP_NUM_THREADS=$NUM_THREADS
     echo "Running with $NUM_THREADS threads..."
-    {time $EXEC --ic-random --N $N_PARTICLES --Lx $Lx --Ly $Ly --Lz $Lz --T $T ; } 2>> timing_results.txt
+
+    $EXEC --ic-random --N $N_PARTICLES --Lx $Lx --Ly $Ly --Lz $Lz --T $T
+
+    EXEC_TIME=$(tail -n 1 timing_results.txt)
+    echo "$NUM_THREADS,$EXEC_TIME" >> timing_results.csv
+    
 done 

@@ -110,6 +110,9 @@ class Solver {
         * @return true if valid, false otherwise.
         */
         bool isValidPos(const std::array<double, 3>& pos);
+
+        const std::array<double, 3>& getFinalPosK(unsigned int ID);
+        const double getKE();
 };
 
 

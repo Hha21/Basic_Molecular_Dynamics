@@ -2,7 +2,7 @@
 #define __PARTICLE_H__
 
 #include <array>
-
+#include <iostream>
 
 /**
  * @struct ParticleProp
@@ -89,6 +89,8 @@ public:
 
     void updateVel(const double dt);                                    ///< Integrate Velocity with F/m
     void updatePos(const double dt);                                    ///< Integrate Position with V
+
+    void printPos();
 };
 
 #endif // __PARTICLE_H__

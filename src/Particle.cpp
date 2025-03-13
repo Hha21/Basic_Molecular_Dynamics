@@ -135,3 +135,11 @@ void Particle::updatePos(const double dt) {
         this->position[k] += dt * this->velocity[k];
     }
 }
+
+void Particle::printPos() {
+    std::cout << "ID:" << this->ID << " Pos {";
+    for (int i = 0; i < 3; ++i) {
+        std::cout << " " << this->position[i] << " ,";
+    }
+    std::cout << "}" << std::endl;
+}

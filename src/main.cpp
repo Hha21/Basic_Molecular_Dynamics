@@ -5,6 +5,8 @@
 
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <chrono>
+#include <fstream>
 
 #include "ICScenario.h"
 
@@ -22,6 +24,8 @@ namespace po = boost::program_options;
  */
 
 int main(int argc, char** argv) {
+    //START TIMING
+    auto start = std::chrono::high_resolution_clock::now();
 
     po::options_description opts("Allowed Options: ");
     opts.add_options()
@@ -122,6 +126,18 @@ int main(int argc, char** argv) {
         std::cerr << "Error: No --ic-* option was provided. Use --help for available options.\n";
         return 1;
     }
+
+    //END TIMING
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "Execution Time: " << elapsed.count() << " seconds" << std::endl;
+
+    std::ofstream timingFile("timing_results.txt", std::ios::app);
+    if (timingFile.is_open()) {
+        timingFile << elapsed.count() << std::endl;
+        timingFile.close();
+    }
+
 
     return 0;
 }
