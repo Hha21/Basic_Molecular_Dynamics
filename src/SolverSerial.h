@@ -4,7 +4,6 @@
 #include <vector>
 #include <iostream>
 #include <random>
-#include <omp.h>
 
 #include "ICScenario.h"
 #include "Particle.h"
@@ -40,9 +39,6 @@ class Solver {
 
         double KE;                                              ///< Kinetic Energy
 
-        double* FORCE_BUFFER;
-        int NUM_THREADS;
-
     public:
 
         /**
@@ -60,7 +56,7 @@ class Solver {
         Solver(double Lx_, double Ly_, double Lz_, 
                 double dt_, double T_, double temp_, 
                 double percType1_, unsigned int N_, ICScenario scenario_);
-        
+
         ~Solver();
         
         /**

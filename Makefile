@@ -10,8 +10,8 @@ BIN_DIR = bin
 DOC_DIR = doc
 
 SRCS_COMMON = $(wildcard $(SRC_DIR)/*.cpp)
-SRCS_PAR = $(filter-out $(SRC_DIR)/SolverSerial.cpp, $(SRCS_COMMON))
-SRCS_SERIAL = $(filter-out $(SRC_DIR)/Solver.cpp, $(SRCS_COMMON))
+SRCS_PAR = $(filter-out $(SRC_DIR)/SolverSerial.cpp $(SRC_DIR)/SolverSerial.h, $(SRCS_COMMON))
+SRCS_SERIAL = $(filter-out $(SRC_DIR)/Solver.cpp $(SRC_DIR)/Solver.h, $(SRCS_COMMON))
 
 OBJS_PAR = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS_PAR))
 OBJS_SERIAL = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRCS_SERIAL))
@@ -22,6 +22,10 @@ TARGET_SERIAL = $(BIN_DIR)/md
 
 # DEFAULT
 all: $(TARGET_PAR) $(TARGET_SERIAL)
+
+mdpar: $(TARGET_PAR)
+
+md: $(TARGET_SERIAL)
 
 $(TARGET_PAR): $(OBJS_PAR)
 	mkdir -p $(BIN_DIR)

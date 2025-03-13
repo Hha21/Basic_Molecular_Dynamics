@@ -1,5 +1,4 @@
 #include "Solver.h"
-#include <omp.h>
 
 ///Boltzmann Constant k_b
 static constexpr double BOLTZMANN = 0.8314459920816467;
@@ -49,12 +48,18 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             randGen(std::random_device{}()), 
             distribution(0.0, 1.0),
             logger("kinetic_energy.txt",                                    // IF RAND -> NO particles.txt
-                scenario == ICScenario::RANDOM ? "" : "particles.txt") {
+                scenario == ICScenario::RANDOM ? "" : "particles.txt"), 
+            NUM_THREADS(omp_get_max_threads())    {
             
+            this->FORCE_BUFFER = new double[this->NUM_THREADS * this->N * 3]();
+
             Solver::initParticles();    
             std::cout << "SOLVER INITIALISED" << std::endl;
             Solver::run();
+}
 
+Solver::~Solver() {
+    delete[] FORCE_BUFFER;
 }
 
 /**
@@ -206,20 +211,16 @@ void Solver::computeForces() {
         p.resetForce();
     }
 
-    int NUM_THREADS;
-    #pragma omp parallel
-    {
-        NUM_THREADS = omp_get_num_threads();
+    // RESET FORCE BUFFER
+    #pragma omp parallel for
+    for (int i = 0; i < NUM_THREADS * this->N * 3; ++i) {
+        FORCE_BUFFER[i] = 0.0;
     }
-
-    std::vector<std::vector<std::array<double, 3>>> FORCE_BUFFER(
-        NUM_THREADS, std::vector<std::array<double, 3>>(this->N, {0.0, 0.0, 0.0}));
 
     #pragma omp parallel 
     {
         int THREAD_ID = omp_get_thread_num();
-
-        std::vector<std::array<double, 3>>& LOCAL_FORCE = FORCE_BUFFER[THREAD_ID];
+        double* LOCAL_FORCE = &FORCE_BUFFER[THREAD_ID * this->N * 3];
 
         #pragma omp for schedule(dynamic)
         for (unsigned int i = 0; i < this->N; ++i) {
@@ -256,21 +257,21 @@ void Solver::computeForces() {
                 double fz = force_mag * rz;
 
                 //CRITICAL REGION - RACE CONDITION
-                LOCAL_FORCE[i][0] -= fx;
-                LOCAL_FORCE[i][1] -= fy;
-                LOCAL_FORCE[i][2] -= fz;
-                LOCAL_FORCE[j][0] += fx;
-                LOCAL_FORCE[j][1] += fy;
-                LOCAL_FORCE[j][2] += fz;
+                LOCAL_FORCE[i * 3 + 0] -= fx;
+                LOCAL_FORCE[i * 3 + 1] -= fy;
+                LOCAL_FORCE[i * 3 + 2] -= fz;
+                LOCAL_FORCE[j * 3 + 0] += fx;
+                LOCAL_FORCE[j * 3 + 1] += fy;
+                LOCAL_FORCE[j * 3 + 2] += fz;
             }
         }
     }
     #pragma omp parallel for
     for (unsigned int i = 0; i < this->N; ++i) {
         for (int THREAD_ID = 0; THREAD_ID < NUM_THREADS; ++THREAD_ID) {
-            this->particles[i].addForceComp(0, FORCE_BUFFER[THREAD_ID][i][0]);
-            this->particles[i].addForceComp(1, FORCE_BUFFER[THREAD_ID][i][1]);
-            this->particles[i].addForceComp(2, FORCE_BUFFER[THREAD_ID][i][2]);
+            this->particles[i].addForceComp(0, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 0]);
+            this->particles[i].addForceComp(1, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 1]);
+            this->particles[i].addForceComp(2, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 2]);
         }
     }
 }

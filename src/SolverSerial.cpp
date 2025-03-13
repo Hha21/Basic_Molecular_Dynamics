@@ -1,4 +1,4 @@
-#include "Solver.h"
+#include "SolverSerial.h"
 
 ///Boltzmann Constant k_b
 static constexpr double BOLTZMANN = 0.8314459920816467;
@@ -54,6 +54,10 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             std::cout << "SERIAL SOLVER INITIALISED" << std::endl;
             Solver::run();
 
+}
+
+Solver::~Solver(){
+    
 }
 
 /**
