@@ -189,7 +189,7 @@ void Solver::setTemp() {
     //GET CURRENT KE
     Solver::computeKE();
 
-    double temp0 = (2.0 * this->KE) / (3.0 * BOLTZMANN);
+    double temp0 = (2.0 * this->KE) / (3.0 * BOLTZMANN * this->N);
 
     double lambda = std::sqrt(this->temp / temp0);
 
@@ -222,7 +222,7 @@ void Solver::computeForces() {
         int THREAD_ID = omp_get_thread_num();
         double* LOCAL_FORCE = &FORCE_BUFFER[THREAD_ID * this->N * 3];
 
-        #pragma omp for schedule(dynamic)
+        #pragma omp for schedule(guided)
         for (unsigned int i = 0; i < this->N; ++i) {
 
             unsigned int typ1 = this->particles[i].getType();

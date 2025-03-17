@@ -186,7 +186,7 @@ void Solver::setTemp() {
     //GET CURRENT KE
     Solver::computeKE();
 
-    double temp0 = (2.0 * this->KE) / (3.0 * BOLTZMANN);
+    double temp0 = (2.0 * this->KE) / (3.0 * BOLTZMANN * this->N);
 
     double lambda = std::sqrt(this->temp / temp0);
 

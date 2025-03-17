@@ -1,27 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=mdpar_scaling_hha21
-#SBATCH --output=output_%j.txt
 #SBATCH --nodes=1
-#SBATCH --ntasks=48
-#SBATCH --mem=16000MB
-#SBATCH --time=03:30:00
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64000MB
+#SBATCH --time=02:00:00
+#SBATCH --job-name=mdpar_hha21
 #SBATCH --partition=short
+#SBATCH --output=timing_output_%j.txt
+
+export OMP_NUM_THREADS=8
 
 EXEC="./bin/mdpar"
-N_PARTICLES=10000
+N_PARTICLES=20000
 Lx=50
 Ly=50
 Lz=50
 T=1.0
-NUM_THREADS_LIST="1 2 4 8 16 32 48"
+OUTPUT_FILE="mdpar_output_${OMP_NUM_THREADS}.txt"
 
-for NUM_THREADS in $NUM_THREADS_LIST; do
-    export OMP_NUM_THREADS=$NUM_THREADS
-    echo "Running with $NUM_THREADS threads..."
+echo "Running with $OMP_NUM_THREADS threads..." | tee "$OUTPUT_FILE"
 
-    $EXEC --ic-random --N $N_PARTICLES --Lx $Lx --Ly $Ly --Lz $Lz --T $T
-
-    EXEC_TIME=$(tail -n 1 timing_results.txt)
-    echo "$NUM_THREADS,$EXEC_TIME" >> timing_results.csv
-    
-done 
+$EXEC --ic-random --N $N_PARTICLES --Lx $Lx --Ly $Ly --Lz $Lz --T $T | tee -a "$OUTPUT_FILE"
