@@ -13,7 +13,7 @@ std::array<double, 3> Solver::getRandPos() {
             dims[2] * (Solver::randDouble())};
 }
 
-std::array<double, 3> Solver::getRandVel() {
+std::array<double, 3> Solver::getRandVel() {    
     return {-0.5 + (Solver::randDouble()),
             -0.5 + (Solver::randDouble()),
             -0.5 + (Solver::randDouble())};
@@ -211,8 +211,16 @@ void Solver::computeForces() {
         p.resetForce();
     }
 
+    int NUM_THREADS;
+
+    #pragma omp parallel
+    {
+    #pragma omp single for schedule(static)
+    NUM_THREADS = omp_get_num_threads();
+    }
+
     // RESET FORCE BUFFER
-    #pragma omp parallel for
+    #pragma omp parallel for simd
     for (int i = 0; i < NUM_THREADS * this->N * 3; ++i) {
         FORCE_BUFFER[i] = 0.0;
     }
@@ -222,7 +230,7 @@ void Solver::computeForces() {
         int THREAD_ID = omp_get_thread_num();
         double* LOCAL_FORCE = &FORCE_BUFFER[THREAD_ID * this->N * 3];
 
-        #pragma omp for schedule(guided)
+        #pragma omp for schedule(dynamic)
         for (unsigned int i = 0; i < this->N; ++i) {
 
             unsigned int typ1 = this->particles[i].getType();
@@ -267,11 +275,11 @@ void Solver::computeForces() {
         }
     }
     #pragma omp parallel for
+    for (int THREAD_ID = 0; THREAD_ID < NUM_THREADS; ++THREAD_ID) {
     for (unsigned int i = 0; i < this->N; ++i) {
-        for (int THREAD_ID = 0; THREAD_ID < NUM_THREADS; ++THREAD_ID) {
-            this->particles[i].addForceComp(0, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 0]);
-            this->particles[i].addForceComp(1, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 1]);
-            this->particles[i].addForceComp(2, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 2]);
+        this->particles[i].addForceComp(0, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 0]);
+        this->particles[i].addForceComp(1, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 1]);
+        this->particles[i].addForceComp(2, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 2]);
         }
     }
 }
@@ -293,12 +301,16 @@ void Solver::computeKE() {
 
 void Solver::step() {
     // 1 - APPLY BC
+    #pragma omp parallel
+    {
     this->domain.applyBC(this->particles);
+    }
 
     // 2 - COMPUTE FORCES (RESET FORCES INSIDE)
     Solver::computeForces();
 
     // 3 - EULER METHOD FOR UPDATE
+    #pragma omp parallel for
     for (Particle& p : particles) {
         p.updateVel(this->dt);
         p.updatePos(this->dt);

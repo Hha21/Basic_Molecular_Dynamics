@@ -1,22 +1,22 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64000MB
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=32000MB
 #SBATCH --time=02:00:00
 #SBATCH --job-name=mdpar_hha21
 #SBATCH --partition=short
 #SBATCH --output=timing_output_%j.txt
 
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS=16
 
 EXEC="./bin/mdpar"
-N_PARTICLES=20000
+N_PARTICLES=10000
 Lx=50
 Ly=50
 Lz=50
 T=1.0
-OUTPUT_FILE="mdpar_output_${OMP_NUM_THREADS}.txt"
+OUTPUT_FILE="mdpar10k_output_${OMP_NUM_THREADS}.txt"
 
 echo "Running with $OMP_NUM_THREADS threads..." | tee "$OUTPUT_FILE"
 

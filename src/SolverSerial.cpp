@@ -285,10 +285,19 @@ void Solver::step() {
 void Solver::run() {
     std::cout << "RUNNING SIMULATION... " << std::endl;
 
-    double lastOutputTime = -0.1; 
+    double lastOutputTime; 
+    double diffTime;
+
+    if (this->scenario == ICScenario::RANDOM) {
+        lastOutputTime = -0.1;
+        diffTime = 0.1;
+    } else{
+        lastOutputTime = -0.01;
+        diffTime = 0.01;
+    } 
 
     while (this->time < this->T) { 
-        if (time >= lastOutputTime + 0.1) {
+        if (time >= lastOutputTime + diffTime) {
             Solver::computeKE();
             logger.logParticleData(this->time, this->particles);
             logger.logKineticEnergy(this->time, this->KE);
@@ -297,6 +306,8 @@ void Solver::run() {
 
         Solver::step();
     }
+
+
     Solver::computeKE();
     logger.logParticleData(this->time, this->particles);
     logger.logKineticEnergy(this->time, this->KE);
