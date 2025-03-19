@@ -14,7 +14,7 @@ struct ParticleProp {
     static constexpr double mass[2] = {1.0, 10.0};
     /// epsilon[T0][T0], epsilon[T0][T1], epsilon[T1][T0], epsilon[T1][T1]
     static constexpr double epsilon[2][2] = {
-        {3.0, 5.0},                             
+        {3.0, 15.0},                             
         {15.0, 60.0}                 
     };
     ///Store σ^6: sigma6[T0][T0], sigma6[T0][T1], sigma6[T1][T0], sigma6[T1][T1]

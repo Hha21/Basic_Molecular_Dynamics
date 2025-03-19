@@ -6,6 +6,7 @@
 #include "ICScenario.h"
 #include "Solver.h"
 #include "SolverSerial.h" 
+#include "SolverSerialCUDA.h"
 
 /**
  * @brief Initializes a predefined test scenario.
