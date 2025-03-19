@@ -51,7 +51,7 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
                 scenario == ICScenario::RANDOM ? "" : "particles.txt"), 
             NUM_THREADS(omp_get_max_threads())    {
             
-            this->FORCE_BUFFER = new double[this->NUM_THREADS * this->N * 3]();
+            this->FORCE_BUFFER = new double[this->N * 3]();
 
             Solver::initParticles();    
             std::cout << "SOLVER INITIALISED" << std::endl;
@@ -206,82 +206,72 @@ void Solver::setTemp() {
  */
 void Solver::computeForces() {
     // RESET FORCES EACH TIME CALLED
-    #pragma omp parallel for
     for (Particle& p : this->particles) {
         p.resetForce();
     }
 
-    int NUM_THREADS;
-
-    #pragma omp parallel
-    {
-    #pragma omp single for schedule(static)
-    NUM_THREADS = omp_get_num_threads();
-    }
 
     // RESET FORCE BUFFER
-    #pragma omp parallel for simd
-    for (int i = 0; i < NUM_THREADS * this->N * 3; ++i) {
-        FORCE_BUFFER[i] = 0.0;
-    }
+    std::fill(this->FORCE_BUFFER, this->FORCE_BUFFER + this->N * 3, 0.0);
 
-    #pragma omp parallel 
-    {
-        int THREAD_ID = omp_get_thread_num();
-        double* LOCAL_FORCE = &FORCE_BUFFER[THREAD_ID * this->N * 3];
+    // MAIN PARALLEL REGION
+    
 
-        #pragma omp for schedule(dynamic)
-        for (unsigned int i = 0; i < this->N; ++i) {
+    // PAIRWISE CALCULATION
+    #pragma omp for collapse(2) schedule(dynamic) reduction(+ : this->FORCE_BUFFER[0 : 3 * this->N]) 
+    for (unsigned int i = 0; i < this->N; ++i) {
+        for (unsigned int j = i + 1; j < this->N; ++j) {
 
             unsigned int typ1 = this->particles[i].getType();
+            unsigned int typ2 = this->particles[j].getType();
+
             const std::array<double, 3>& pos1 = this->particles[i].getPos();
-            for (unsigned int j = i + 1; j < this->N; ++j) {
-
-                unsigned int typ2 = this->particles[i].getType();
-
-                const std::array<double, 3>& pos2 = this->particles[j].getPos();
-                
-                double rx = pos1[0] - pos2[0];
-                double ry = pos1[1] - pos2[1];
-                double rz = pos1[2] - pos2[2];
-                double r2 = rx * rx + ry * ry + rz * rz;
-
-                // SQUARED DISTANCE (1 / r^2)
-                double inv_r2 = 1.0 / r2;
-                double inv_r4 = inv_r2 * inv_r2;
-                double inv_r8 = inv_r4 * inv_r4;
-                double inv_r14 = inv_r8 * inv_r4 * inv_r2; 
+            const std::array<double, 3>& pos2 = this->particles[j].getPos();
             
-                // LENNARD-JONES FORCE
-                double eps_ij = ParticleProp::epsilon[typ1][typ2];
-                double sigma6_ij = ParticleProp::sigma6[typ1][typ2];
-                double sigma12_ij = ParticleProp::sigma12[typ1][typ2];
+            double rx = pos1[0] - pos2[0];
+            double ry = pos1[1] - pos2[1];
+            double rz = pos1[2] - pos2[2];
+            double r2 = rx * rx + ry * ry + rz * rz;
 
-                double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
+            // SQUARED DISTANCE (1 / r^2)
+            double inv_r2 = 1.0 / r2;
+            double inv_r4 = inv_r2 * inv_r2;
+            double inv_r8 = inv_r4 * inv_r4;
+            double inv_r14 = inv_r8 * inv_r4 * inv_r2; 
+        
+            // LENNARD-JONES FORCE
+            double eps_ij = ParticleProp::epsilon[typ1][typ2];
+            double sigma6_ij = ParticleProp::sigma6[typ1][typ2];
+            double sigma12_ij = ParticleProp::sigma12[typ1][typ2];
 
-                //FORCE VECTOR:
-                double fx = force_mag * rx;
-                double fy = force_mag * ry;
-                double fz = force_mag * rz;
+            double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
 
-                //CRITICAL REGION - RACE CONDITION
-                LOCAL_FORCE[i * 3 + 0] -= fx;
-                LOCAL_FORCE[i * 3 + 1] -= fy;
-                LOCAL_FORCE[i * 3 + 2] -= fz;
-                LOCAL_FORCE[j * 3 + 0] += fx;
-                LOCAL_FORCE[j * 3 + 1] += fy;
-                LOCAL_FORCE[j * 3 + 2] += fz;
-            }
+            //FORCE VECTOR:
+            double fx = force_mag * rx;
+            double fy = force_mag * ry;
+            double fz = force_mag * rz;
+
+            //STORE LOCALLY
+            FORCE_BUFFER[i * 3 + 0] -= fx;
+            FORCE_BUFFER[i * 3 + 1] -= fy;
+            FORCE_BUFFER[i * 3 + 2] -= fz;
+            FORCE_BUFFER[j * 3 + 0] += fx;
+            FORCE_BUFFER[j * 3 + 1] += fy;
+            FORCE_BUFFER[j * 3 + 2] += fz;
         }
     }
-    #pragma omp parallel for
-    for (int THREAD_ID = 0; THREAD_ID < NUM_THREADS; ++THREAD_ID) {
-    for (unsigned int i = 0; i < this->N; ++i) {
-        this->particles[i].addForceComp(0, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 0]);
-        this->particles[i].addForceComp(1, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 1]);
-        this->particles[i].addForceComp(2, FORCE_BUFFER[THREAD_ID * this->N * 3 + i * 3 + 2]);
+    
+    // COMBINE LOCAL FORCE CONTRIBUTIONS
+    #pragma omp parallel for schedule(dynamic)
+        for (unsigned int i = 0; i < this->N; ++i) {
+            double fx = this->FORCE_BUFFER[i * 3 + 0];
+            double fy = this->FORCE_BUFFER[i * 3 + 1];
+            double fz = this->FORCE_BUFFER[i * 3 + 2];
+
+            this->particles[i].addForceComp(0, fx);
+            this->particles[i].addForceComp(1, fy);
+            this->particles[i].addForceComp(2, fz);
         }
-    }
 }
 
 void Solver::computeKE() {
@@ -301,16 +291,14 @@ void Solver::computeKE() {
 
 void Solver::step() {
     // 1 - APPLY BC
-    #pragma omp parallel
-    {
     this->domain.applyBC(this->particles);
-    }
+    
 
     // 2 - COMPUTE FORCES (RESET FORCES INSIDE)
     Solver::computeForces();
 
     // 3 - EULER METHOD FOR UPDATE
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic)
     for (Particle& p : particles) {
         p.updateVel(this->dt);
         p.updatePos(this->dt);

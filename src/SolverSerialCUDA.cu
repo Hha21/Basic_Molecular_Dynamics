@@ -1,8 +1,16 @@
-#include "SolverSerial.h"
+#include "SolverSerialCUDA.cuh"
 
 ///Boltzmann Constant k_b
 static constexpr double BOLTZMANN = 0.8314459920816467;
 
+struct GPU_ParticleProp {
+    double mass[2];
+    double epsilon[2][2];
+    double sigma6[2][2];
+    double sigma12[2][2];
+};
+
+__constant__ GPU_ParticleProp GPU_PARTICLE_PROPERTIES;
 
 std::array<double, 3> Solver::getRandPos() {
     //GET {Lx, Ly, Lz} ONCE
@@ -50,13 +58,126 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
             logger("kinetic_energy.txt",                                    // IF RAND -> NO particles.txt
                 scenario == ICScenario::RANDOM ? "" : "particles.txt") {
             
-            Solver::initParticles();    
-            std::cout << "SERIAL SOLVER INITIALISED" << std::endl;
+            this->posX = new double[this->N]();
+            this->posY = new double[this->N]();
+            this->posZ = new double[this->N]();
+            this->FORCE_BUFFER = new double[this->N * 3]();
+            this->types = new unsigned int[this->N]();
+
+            Solver::initParticles();
+            Solver::initPointers();
+            Solver::allocGPUMemory();
+            
+            std::cout << "CUDA SOLVER INITIALISED" << std::endl;
             Solver::run();
 }
 
-Solver::~Solver(){
+void Solver::allocGPUMemory() {
 
+    GPU_ParticleProp TEMP_PARTICLE_PROPERTIES;
+
+
+    for (int i = 0; i < 2; i++) {
+        TEMP_PARTICLE_PROPERTIES.mass[i] = ParticleProp::mass[i];
+        for (int j = 0; j < 2; j++) {
+            TEMP_PARTICLE_PROPERTIES.epsilon[i][j] = ParticleProp::epsilon[i][j];
+            TEMP_PARTICLE_PROPERTIES.sigma6[i][j] = ParticleProp::sigma6[i][j];
+            TEMP_PARTICLE_PROPERTIES.sigma12[i][j] = ParticleProp::sigma12[i][j];
+        }
+    }
+
+    cudaMemcpyToSymbol(GPU_PARTICLE_PROPERTIES, &TEMP_PARTICLE_PROPERTIES, sizeof(GPU_ParticleProp));
+
+    cudaMallocManaged(&posX, this->N * sizeof(double));
+    cudaMallocManaged(&posY, this->N * sizeof(double));
+    cudaMallocManaged(&posZ, this->N * sizeof(double));
+    cudaMallocManaged(&FORCE_BUFFER, this->N * 3 * sizeof(double));
+    cudaMallocManaged(&types, this->N * sizeof(unsigned int));
+}
+
+__global__ void LJKernel(double* posX, double* posY, double* posZ, unsigned int* types,
+                            double* FORCE_BUFFER, unsigned int N) {
+    
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= N) return;
+
+    double fx = 0.0;
+    double fy = 0.0;
+    double fz = 0.0;
+
+    for (unsigned int j = 0; j < N; j++) {
+
+        unsigned int typ1 = types[i];
+        unsigned int typ2 = types[j];
+
+        double rx = posX[i] - posX[j];
+        double ry = posY[i] - posY[j];
+        double rz = posZ[i] - posZ[j];
+        double r2 = rx * rx + ry * ry + rz * rz;
+
+        double inv_r2 = 1.0 / r2;
+        double inv_r4 = inv_r2 * inv_r2;
+        double inv_r8 = inv_r4 * inv_r4;
+        double inv_r14 = inv_r8 * inv_r4 * inv_r2;
+
+        
+
+        double eps_ij = GPU_PARTICLE_PROPERTIES.epsilon[typ1][typ2];
+        double sigma6_ij = GPU_PARTICLE_PROPERTIES.sigma6[typ1][typ2];
+        double sigma12_ij = GPU_PARTICLE_PROPERTIES.sigma12[typ1][typ2];
+
+        double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
+
+        fx += force_mag * rx;
+        fy += force_mag * ry;
+        fz += force_mag * rz;
+    }
+    FORCE_BUFFER[i * 3 + 0] = fx;
+    FORCE_BUFFER[i * 3 + 1] = fy;
+    FORCE_BUFFER[i * 3 + 2] = fz;
+}
+
+void Solver::computeForcesCUDA() {
+    int THREADS_PER_BLOCK = 256;
+    int NUM_INTERACTIONS = (this->N + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+    int NUM_BLOCKS = (NUM_INTERACTIONS + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
+
+    LJKernel<<<NUM_BLOCKS, THREADS_PER_BLOCK>>>(this->posX, this->posY, this->posZ, this->types, this->FORCE_BUFFER, this->N);
+
+    cudaDeviceSynchronize();
+}
+
+void Solver::cpHostToDevice() {
+    for (const Particle& p: this->particles) {
+        const std::array<double, 3>& pos = p.getPos();
+        const unsigned int ID_ = p.getID();
+
+        this->posX[ID_] = pos[0];
+        this->posY[ID_] = pos[1];
+        this->posZ[ID_] = pos[2];
+    }
+}
+
+void Solver::cpDeviceToHost() {
+    for (unsigned int i = 0; i < this->N; ++i) {
+        Particle& p = this->particles[i];
+        p.addForceComp(0, this->FORCE_BUFFER[i * 3 + 0]);
+        p.addForceComp(1, this->FORCE_BUFFER[i * 3 + 1]);
+        p.addForceComp(2, this->FORCE_BUFFER[i * 3 + 2]);
+    }
+}
+
+void Solver::freeGPUMem() {
+    delete[] this->posX;
+    delete[] this->posY;
+    delete[] this->posZ;
+    delete[] this->FORCE_BUFFER;
+    delete[] this->types;
+}
+
+
+Solver::~Solver(){
+    Solver::freeGPUMem();
 }
 
 /**
@@ -176,6 +297,18 @@ void Solver::initParticles() {
 }
 
 
+void Solver::initPointers() {
+    for (const Particle& p: this->particles) {
+        const std::array<double, 3>& pos = p.getPos();
+        const unsigned int ID_ = p.getID();
+
+        this->posX[ID_] = pos[0];
+        this->posY[ID_] = pos[1];
+        this->posZ[ID_] = pos[2];
+        this->types[ID_] = p.getType();
+    }
+}
+
 //DYNAMICS 
 
 void Solver::setTemp() {
@@ -198,58 +331,6 @@ void Solver::setTemp() {
 }
 
 
-/**
- * @brief Computes the Lennard-Jones force between all particle pairs.
- */
-void Solver::computeForces() {
-    // RESET FORCES EACH TIME CALLED
-    for (Particle& p : this->particles) {
-        p.resetForce();
-    }
-
-    // LOOP FOR UNIQUE PAIRS (i, j) WITH i < j
-    for (unsigned int i = 0; i < this->N; ++i) {
-
-        unsigned int typ1 = this->particles[i].getType();
-        const std::array<double, 3>& pos1 = this->particles[i].getPos();
-        for (unsigned int j = i + 1; j < this->N; ++j) {
-
-            unsigned int typ2 = this->particles[i].getType();
-
-            const std::array<double, 3>& pos2 = this->particles[j].getPos();
-            
-            double rx = pos1[0] - pos2[0];
-            double ry = pos1[1] - pos2[1];
-            double rz = pos1[2] - pos2[2];
-            double r2 = rx * rx + ry * ry + rz * rz;
-
-            // SQUARED DISTANCE (1 / r^2)
-            double inv_r2 = 1.0 / r2;
-            double inv_r4 = inv_r2 * inv_r2;
-            double inv_r8 = inv_r4 * inv_r4;
-            double inv_r14 = inv_r8 * inv_r4 * inv_r2; 
-        
-            // LENNARD-JONES FORCE
-            double eps_ij = ParticleProp::epsilon[typ1][typ2];
-            double sigma6_ij = ParticleProp::sigma6[typ1][typ2];
-            double sigma12_ij = ParticleProp::sigma12[typ1][typ2];
-
-            double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
-
-            //FORCE VECTOR:
-            double fx = force_mag * rx;
-            double fy = force_mag * ry;
-            double fz = force_mag * rz;
-            this->particles[i].addForceComp(0, -fx);
-            this->particles[i].addForceComp(1, -fy);
-            this->particles[i].addForceComp(2, -fz);
-            this->particles[j].addForceComp(0, fx);
-            this->particles[j].addForceComp(1, fy);
-            this->particles[j].addForceComp(2, fz);
-        }
-    }
-}
-
 void Solver::computeKE() {
     //INIT KE
     double KE_ = 0.0;
@@ -270,13 +351,14 @@ void Solver::step() {
     this->domain.applyBC(this->particles);
 
     // 2 - COMPUTE FORCES (RESET FORCES INSIDE)
-    Solver::computeForces();
-
+    Solver::computeForcesCUDA();
+    Solver::cpDeviceToHost();
     // 3 - EULER METHOD FOR UPDATE
     for (Particle& p : particles) {
         p.updateVel(this->dt);
         p.updatePos(this->dt);
     }
+    Solver::cpHostToDevice();
 
     // 4 - UPDATE t
     this->time += this->dt;

@@ -1,23 +1,28 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=32000MB
-#SBATCH --time=02:00:00
+#SBATCH --cpus-per-task=48
+#SBATCH --mem=64000MB
+#SBATCH --time=03:00:00
 #SBATCH --job-name=mdpar_hha21
 #SBATCH --partition=short
 #SBATCH --output=timing_output_%j.txt
+#SBATCH --mail-type=END
+#SBATCH --mail-user=hha21@ic.ac.uk
 
-export OMP_NUM_THREADS=16
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 EXEC="./bin/mdpar"
-N_PARTICLES=10000
-Lx=50
-Ly=50
-Lz=50
-T=1.0
-OUTPUT_FILE="mdpar10k_output_${OMP_NUM_THREADS}.txt"
+N_PARTICLES=100000
+Lx=100   
+Ly=100
+Lz=100
+T=0.3
 
-echo "Running with $OMP_NUM_THREADS threads..." | tee "$OUTPUT_FILE"
+OUTPUT_DIR="timing_results/"
+mkdir -p $OUTPUT_DIR
+OUTPUT_FILE="${OUTPUT_DIR}mdpar_output_${SLURM_CPUS_PER_TASK}.txt"
+
+echo "Running with $SLURM_CPUS_PER_TASK threads..." | tee "$OUTPUT_FILE"
 
 $EXEC --ic-random --N $N_PARTICLES --Lx $Lx --Ly $Ly --Lz $Lz --T $T | tee -a "$OUTPUT_FILE"

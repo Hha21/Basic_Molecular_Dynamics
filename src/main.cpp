@@ -6,7 +6,6 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <chrono>
-#include <fstream>
 
 #include "ICScenario.h"
 
@@ -131,13 +130,6 @@ int main(int argc, char** argv) {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "Execution Time: " << elapsed.count() << " seconds" << std::endl;
-
-    std::ofstream timingFile("timing_results.txt", std::ios::app);
-    if (timingFile.is_open()) {
-        timingFile << elapsed.count() << std::endl;
-        timingFile.close();
-    }
-
 
     return 0;
 }
