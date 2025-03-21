@@ -3,6 +3,7 @@
 ///Boltzmann Constant k_b
 static constexpr double BOLTZMANN = 0.8314459920816467;
 
+// GPU STRUCT FOR PROPERTIES (CANNOT ACCESS STATIC MEMORY)
 struct GPU_ParticleProp {
     double mass[2];
     double epsilon[2][2];
@@ -10,6 +11,7 @@ struct GPU_ParticleProp {
     double sigma12[2][2];
 };
 
+//DECLARE GPU CONST
 __constant__ GPU_ParticleProp GPU_PARTICLE_PROPERTIES;
 
 std::array<double, 3> Solver::getRandPos() {
@@ -68,8 +70,8 @@ Solver::Solver(double Lx_, double Ly_, double Lz_,
 
 void Solver::allocGPUMemory() {
 
+    // TEMP TO COPY PARTICLE PROPERTY VALUES
     GPU_ParticleProp TEMP_PARTICLE_PROPERTIES;
-
 
     for (int i = 0; i < 2; i++) {
         TEMP_PARTICLE_PROPERTIES.mass[i] = ParticleProp::mass[i];
@@ -80,8 +82,10 @@ void Solver::allocGPUMemory() {
         }
     }
 
+    // COPY PROPERTIES
     cudaMemcpyToSymbol(GPU_PARTICLE_PROPERTIES, &TEMP_PARTICLE_PROPERTIES, sizeof(GPU_ParticleProp));
 
+    // SHARE THESE BETWEEN CPU AND GPU
     cudaMallocManaged(&posX, this->N * sizeof(double));
     cudaMallocManaged(&posY, this->N * sizeof(double));
     cudaMallocManaged(&posZ, this->N * sizeof(double));
@@ -91,6 +95,8 @@ void Solver::allocGPUMemory() {
 
 __device__
 void getGPUProperties(const int typ1, const int typ2, double* PROPERTIES) {
+
+    // NOT USED 
 
     int typSum = typ1 + typ2;
     switch(typSum) {
@@ -119,13 +125,15 @@ __global__
 void LJKernel(double* posX, double* posY, double* posZ, unsigned int* types,
                             double* FORCE_BUFFER, unsigned int N) {
     
+    // COMPUTE FORCES ON i FROM ALL OTHER PARTICLES j
+
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= N)  return;
 
     double fx = 0.0;
     double fy = 0.0;
     double fz = 0.0;
-    double* PROPERTIES = new double[3];
+    //double* PROPERTIES = new double[3];
 
     for (int j = 0; j < N; j++) {
 
@@ -153,7 +161,7 @@ void LJKernel(double* posX, double* posY, double* posZ, unsigned int* types,
         double eps_ij = GPU_PARTICLE_PROPERTIES.epsilon[typ1][typ2];
         double sigma6_ij = GPU_PARTICLE_PROPERTIES.sigma6[typ1][typ2];
         double sigma12_ij = GPU_PARTICLE_PROPERTIES.sigma12[typ1][typ2];
-        
+
         double force_mag = -24.0 * eps_ij * ((2.0 * sigma12_ij * inv_r14) - (sigma6_ij * inv_r8));
 
         fx += force_mag * rx;
@@ -163,8 +171,9 @@ void LJKernel(double* posX, double* posY, double* posZ, unsigned int* types,
         //printf("Value rx, fx, i, j = %f %f %d %d\n", rx, fx, i, j);
     }
 
-    delete[] PROPERTIES;
+    //delete[] PROPERTIES;
 
+    // NOW CPU CAN ACCESS FORCE_BUFFER FOR PARTICLE i UPDATE
     FORCE_BUFFER[i * 3 + 0] = fx;
     FORCE_BUFFER[i * 3 + 1] = fy;
     FORCE_BUFFER[i * 3 + 2] = fz;
@@ -181,6 +190,9 @@ void Solver::computeForcesCUDA() {
 }
 
 void Solver::cpHostToDevice() {
+
+    //DEVICE NEEDS THE NEW POSITIONS FROM EACH PARTICLE
+
     for (const Particle& p: this->particles) {
         const std::array<double, 3>& pos = p.getPos();
         const unsigned int ID_ = p.getID();
@@ -191,6 +203,9 @@ void Solver::cpHostToDevice() {
 }
 
 void Solver::cpDeviceToHost() {
+
+    // HOST NEEDS THE NEW FORCES COMPUTED BY DEVICE
+
     for (unsigned int i = 0; i < this->N; ++i) {
         Particle& p = this->particles[i];
         p.addForceComp(0, this->FORCE_BUFFER[i * 3 + 0]);
@@ -201,15 +216,9 @@ void Solver::cpDeviceToHost() {
 
 void Solver::freeGPUMem() {
 
+    // FREE MEMORY ALLOCATED TO CPU
+
     cudaDeviceSynchronize();
-
-    std::cout << "SIMULATION COMPLETE" << std::endl;
-
-    // std::cout << "About to free frc: " << FORCE_BUFFER << std::endl;
-    // cudaError_t err = cudaFree(types);
-    // if (err != cudaSuccess) {
-    //     std::cerr << "Error freeing frc: " << cudaGetErrorString(err) << std::endl;
-    // }
 
     cudaFree(posX);
     cudaFree(posY);
@@ -217,13 +226,6 @@ void Solver::freeGPUMem() {
     cudaFree(FORCE_BUFFER);
     cudaFree(types);
 
-    // if (posX) { cudaFree(posX); posX = nullptr;}
-    // if (posY) { cudaFree(posY); posY = nullptr;}
-    // if (posZ) { cudaFree(posZ); posZ = nullptr; }
-    // if (FORCE_BUFFER) { cudaFree(FORCE_BUFFER); FORCE_BUFFER = nullptr; }
-    // if (types) { cudaFree(types); types = nullptr;}
-
-    std::cout << "FREED MEMORY" << std::endl;
 }
 
 
@@ -355,6 +357,8 @@ void Solver::resetParticles() {
 }
 
 void Solver::initPointers() {
+
+    // ALLOCATE INITIAL VALUES FOR POS & VALUES FOR TYPES
     for (const Particle& p: this->particles) {
         const std::array<double, 3>& pos = p.getPos();
         const unsigned int ID_ = p.getID();
@@ -425,11 +429,10 @@ void Solver::step() {
 void Solver::run() {
     std::cout << "RUNNING SIMULATION... " << std::endl;
 
-    double lastOutputTime = -0.1; 
-    double diffTime = 0.1;
+    double lastOutputTime = -0.1;
 
     while (this->time < this->T) { 
-        if (time >= lastOutputTime + diffTime) {
+        if (time >= lastOutputTime + 0.1) {
             Solver::computeKE();
             logger.logParticleData(this->time, this->particles);
             logger.logKineticEnergy(this->time, this->KE);

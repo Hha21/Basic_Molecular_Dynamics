@@ -168,7 +168,6 @@ void Solver::initParticles() {
                     particles.emplace_back(ID_++, type, newPos, newVel);
                 }
             }
-            Solver::setTemp();
             break;
         }
 
@@ -184,8 +183,6 @@ void Solver::initParticles() {
 void Solver::setTemp() {
     if (this->temp <= 0.0) return;
 
-    std::cout << "TEMP APPLIED!" << std::endl;
-
     //GET CURRENT KE
     Solver::computeKE();
 
@@ -193,6 +190,7 @@ void Solver::setTemp() {
 
     double lambda = std::sqrt(this->temp / temp0);
 
+    #pragma omp parallel for
     for (Particle& p : this->particles) {
         std::array<double, 3> v0 = p.getVel();
         for (int k = 0; k < 3; ++k) v0[k] *= lambda;
@@ -210,13 +208,11 @@ void Solver::computeForces() {
         p.resetForce();
     }
 
-
     // RESET FORCE BUFFER
     std::fill(this->FORCE_BUFFER, this->FORCE_BUFFER + this->N * 3, 0.0);
 
     // MAIN PARALLEL REGION
     
-
     // PAIRWISE CALCULATION
     #pragma omp for collapse(2) schedule(dynamic) reduction(+ : this->FORCE_BUFFER[0 : 3 * this->N]) 
     for (unsigned int i = 0; i < this->N; ++i) {
@@ -275,13 +271,17 @@ void Solver::computeForces() {
 }
 
 void Solver::computeKE() {
-    //INIT KE
+    //INIT KE (EACH THREAD)
     double KE_ = 0.0;
+
+    // COMPUTE IN PARALLEL AND REDUCE DOWN KE
+    #pragma omp parallel for reduction(+: KE_)
     for (const Particle& p : this->particles) {
         double speed = 0.0;
+        const std::array<double, 3> pVel = p.getVel();
 
         for (int k = 0; k < 3; ++k) {
-            speed += p.getVel()[k] * p.getVel()[k];
+            speed += pVel[k] * pVel[k];
         }
 
         KE_ += 0.5 * p.getMass() * speed; 
@@ -290,21 +290,25 @@ void Solver::computeKE() {
 }
 
 void Solver::step() {
-    // 1 - APPLY BC
+
+    // 1 - SET TEMP
+    Solver::setTemp();
+
+    // 2 - APPLY BC
     this->domain.applyBC(this->particles);
     
 
-    // 2 - COMPUTE FORCES (RESET FORCES INSIDE)
+    // 3 - COMPUTE FORCES (RESET FORCES INSIDE)
     Solver::computeForces();
 
-    // 3 - EULER METHOD FOR UPDATE
+    //4 - EULER METHOD FOR UPDATE
     #pragma omp parallel for schedule(dynamic)
     for (Particle& p : particles) {
         p.updateVel(this->dt);
         p.updatePos(this->dt);
     }
 
-    // 4 - UPDATE t
+    // 5 - INCREMENT t
     this->time += this->dt;
 }
 

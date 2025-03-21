@@ -165,7 +165,6 @@ void Solver::initParticles() {
                     particles.emplace_back(ID_++, type, newPos, newVel);
                 }
             }
-            Solver::setTemp();
             break;
         }
 
@@ -173,6 +172,8 @@ void Solver::initParticles() {
             std::cerr << "ERR: INVALID SCENARIO!" << std::endl;
             exit(1);
     }
+
+    Solver::setTemp();
 }
 
 
@@ -180,8 +181,6 @@ void Solver::initParticles() {
 
 void Solver::setTemp() {
     if (this->temp <= 0.0) return;
-
-    std::cout << "TEMP APPLIED!" << std::endl;
 
     //GET CURRENT KE
     Solver::computeKE();
@@ -255,9 +254,9 @@ void Solver::computeKE() {
     double KE_ = 0.0;
     for (const Particle& p : this->particles) {
         double speed = 0.0;
-
+        const std::array<double, 3> pVel = p.getVel();
         for (int k = 0; k < 3; ++k) {
-            speed += p.getVel()[k] * p.getVel()[k];
+            speed += pVel[k] * pVel[k];
         }
 
         KE_ += 0.5 * p.getMass() * speed; 
@@ -266,19 +265,23 @@ void Solver::computeKE() {
 }
 
 void Solver::step() {
-    // 1 - APPLY BC
+
+    // 1 - SET TEMP
+    Solver::setTemp();
+
+    // 2 - APPLY BC
     this->domain.applyBC(this->particles);
 
-    // 2 - COMPUTE FORCES (RESET FORCES INSIDE)
+    // 3 - COMPUTE FORCES (RESET FORCES INSIDE)
     Solver::computeForces();
 
-    // 3 - EULER METHOD FOR UPDATE
+    // 4 - EULER METHOD FOR UPDATE
     for (Particle& p : particles) {
         p.updateVel(this->dt);
         p.updatePos(this->dt);
     }
 
-    // 4 - UPDATE t
+    // 5 - INCREMENT t
     this->time += this->dt;
 }
 
@@ -286,10 +289,9 @@ void Solver::run() {
     std::cout << "RUNNING SIMULATION... " << std::endl;
 
     double lastOutputTime = -0.1; 
-    double diffTime = 0.1;
 
     while (this->time < this->T) { 
-        if (time >= lastOutputTime + diffTime) {
+        if (this->time >=  lastOutputTime + 0.1) {
             Solver::computeKE();
             logger.logParticleData(this->time, this->particles);
             logger.logKineticEnergy(this->time, this->KE);

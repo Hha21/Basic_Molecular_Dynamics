@@ -14,7 +14,7 @@
 
 /**
  * @class Solver
- * @brief Runs the Simulation of particle interaction.
+ * @brief Runs the Simulation of particle interaction, with Parallel implementation in OpenMP.
  * 
  * This class initializes particles, applies forces, and integrates their motion over time.
  * It also manages boundary conditions and logging.
@@ -40,8 +40,8 @@ class Solver {
 
         double KE;                                              ///< Kinetic Energy
 
-        double* FORCE_BUFFER;
-        int NUM_THREADS;
+        double* FORCE_BUFFER;                                   ///< Buffer for accumulating thread forces.
+        int NUM_THREADS;                                        ///< Total Number of Threads.
 
     public:
 
@@ -61,6 +61,9 @@ class Solver {
                 double dt_, double T_, double temp_, 
                 double percType1_, unsigned int N_, ICScenario scenario_);
         
+        /**
+        * @brief Solver Class destructor.
+        */
         ~Solver();
         
         /**
@@ -69,7 +72,7 @@ class Solver {
         void initParticles();
         
         /**
-        * @brief Scales velocities to set desired intial temperature.
+        * @brief Scales velocities to set desired temperature.
         */
         void setTemp();
 

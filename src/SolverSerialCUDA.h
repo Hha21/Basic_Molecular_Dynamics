@@ -12,8 +12,8 @@
 
 
 /**
- * @class Solver
- * @brief Runs the Simulation of particle interaction.
+ * @class SolverCUDA
+ * @brief Runs the Simulation of particle interaction, with CUDA offloading to the GPU.
  * 
  * This class initializes particles, applies forces, and integrates their motion over time.
  * It also manages boundary conditions and logging.
@@ -41,18 +41,40 @@ class Solver {
 
         // GPU MEMORY POINTERS
 
-        double* posX;
-        double* posY;
-        double* posZ;
-        double* FORCE_BUFFER;
-        unsigned int* types;
+        double* posX;                                           ///< Shared copy of particle X positions.
+        double* posY;                                           ///< Shared copy of particle Y positions.
+        double* posZ;                                           ///< Shared copy of particle Z positions.
+        double* FORCE_BUFFER;                                   ///< Shared copy of all particle forces.
+        unsigned int* types;                                    ///< Shared copy of all particle types.
 
-
+        /**
+        * @brief Initialises shared pointers to correct values for initial particle values and the particle types
+        */
         void initPointers();
+
+        /**
+        * @brief Initialises pointers and memory size for shared data.
+        */
         void allocGPUMemory();
+
+        /**
+        * @brief Force computation implementation by the GPU.
+        */
         void computeForcesCUDA();
+
+        /**
+        * @brief Transferring relevant data from GPU to CPU needed for simulation update.
+        */
         void cpHostToDevice();
+
+        /**
+        * @brief Transferring relevant data from CPU to GPU needed for force calculation.
+        */
         void cpDeviceToHost();
+
+        /**
+        * @brief Transferring relevant data from CPU to GPU needed for force calculation.
+        */
         void freeGPUMem();
 
     public:
@@ -73,13 +95,19 @@ class Solver {
                 double dt_, double T_, double temp_, 
                 double percType1_, unsigned int N_, ICScenario scenario_);
 
+        /**
+        * @brief Solver Destructor.
+        */
         ~Solver();
         
         /**
-        * @brief Initializes particles based on the selected initial condition scenario.
+        * @brief Initialises particles based on the selected initial condition scenario.
         */
         void initParticles();
-
+        
+        /**
+        * @brief Reset particle (forces) between runs).
+        */
         void resetParticles();
         
         /**
@@ -127,9 +155,5 @@ class Solver {
         const std::array<double, 3>& getFinalPosK(unsigned int ID);
         const double getKE();
 };
-
-// __global__ void LJKernel(double* posX, double* posY, double* posZ, 
-//                         unsigned int* types, double* forceX, 
-//                         double* forceY, double* forceZ, unsigned int N);
 
 #endif

@@ -12,17 +12,12 @@
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
+cd /home/hha21/HPC_CourseWork/HPC_Coursework
 EXEC="./bin/mdpar"
 N_PARTICLES=100000
 Lx=100   
 Ly=100
 Lz=100
-T=0.3
+T=0.075
 
-OUTPUT_DIR="timing_results/"
-mkdir -p $OUTPUT_DIR
-OUTPUT_FILE="${OUTPUT_DIR}mdpar_output_${SLURM_CPUS_PER_TASK}.txt"
-
-echo "Running with $SLURM_CPUS_PER_TASK threads..." | tee "$OUTPUT_FILE"
-
-$EXEC --ic-random --N $N_PARTICLES --Lx $Lx --Ly $Ly --Lz $Lz --T $T | tee -a "$OUTPUT_FILE"
+time ./bin/mdpar --ic-random --N ${N_PARTICLES} --Lx ${Lx} --Ly ${Ly} --Lz ${Lz} --T ${T} --temp 0.1904
